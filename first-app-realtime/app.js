@@ -172,3 +172,47 @@ function adicionarLimite(){
 		console.log(snapshot.val(), snapshot.key);
 	});
 }
+
+
+function removerObservaveis() {
+	pessoaRef.on('value', snapshot => {
+
+
+		pessoaRef.off('value');
+	})
+}
+
+function log(){
+	firebase.database.enableLogging( message => console.log('[FIREBASE]', message));
+}
+
+log();
+
+
+function capturandoErros() {
+	pessoaRef.orderByChild('idade').startAt(0).limitToLast(20).on('child_added', snapshot => {
+		console.log(snapshot.val(), snapshot.key);
+	}, err => console.log(err) );
+}
+
+function realizandoChamadasHttp() {
+
+	//GET
+	fetch('https://fir-app-c1519.firebaseio.com/pessoa/-LmHPXCSWmPc0hS1DZKz.json')
+	.then(res => res.json())
+	.then(res => {
+		console.log(res);
+	});
+
+	//POST
+	fetch('https://fir-app-c1519.firebaseio.com/pessoa.json', {
+		body: JSON.stringify({nome: 'PGZAO', idade: 13}),
+		method: 'POST',
+		mode: 'no-cors'
+	})
+	.then(res => res.json())
+	.then(res => {
+		console.log(res);
+	})
+	.catch(err => console.log(err));
+}
