@@ -45,25 +45,27 @@ function lerPessoas(){
 	});
 }
 
-function removerPessoa(id) {
-	pessoaRef.child(id).remove();
-	// pessoaRef.child(id).set(null);
+function removerCampoDeUmObjeto(id, campo){
+
+	pessoaCollection.doc(id).update({idade : firebase.firestore.FieldValue.delete()}).then( () => {
+		console.log('Cmapo do objeto removido');
+	});
 }
 
-function removerTodas() {
+function removerPessoa(id) {
 
-	pessoaRef.once('value').then(snapshot => {
-		snapshot.forEach( s => {
-			removerPessoa(s.key);
-		});
+	pessoaCollection.doc(id).delete().then( () => {
+		console.log('Objeto removido');
 	});
 }
 
 function updatePessoa(id, pessoa){
-	
-	// pessoaRef.child(id).set(pessoa).then( () => {} );
-	pessoaRef.child(id).update(pessoa).then( () => {} );
+	//Retornará um erro se não encontrar o ID
+	pessoaCollection.doc(id).update(pessoa).then( () => {
 
+		console.log('updated');
+
+	});
 }
 
 function updatePessoaAtributo(id, prop, value){
@@ -82,56 +84,27 @@ function updatePessoaAtributo(id, prop, value){
 function escutarPessoas(){
 
 
-	/*
-		
-		Método recebe todos os dados de uma vezm similar ao ONCE
-		porém fica ouvindo se há uma nova inserção
-		preferivél usar o chil_added, o child added vai ser executado em todos os registros
+	pessoaCollection.onSnapshot( snapshot => {
 
-	*/
-	// pessoaRef.on('value', snapshot => {
+			//tras todos os dados utlizando o type add na primeira chamada
+		snapshot.docChanges().forEach( pessoa => {
+			if(pessoa.type == 'added'){
+				console.log(pessoa.doc.id, 'added');
+				console.log(pessoa.doc.data());
+			}
 
-		// console.log('ON VALUE');
-		// console.log(snapshot.val(), snapshot.key);
+			if(pessoa.type == 'modified'){
+				console.log(pessoa.doc.id, 'modified');
+			}
 
-		// snapshot.forEach( s => {
-			// console.log(s.val(), s.key);
-		// });
-	// });
+			if(pessoa.type == 'removed'){
+				console.log(pessoa.doc.id, 'removed');
+			}
 
-	pessoaRef.on('child_added', snapshot => {
-		console.log('Chield added');
-
-		console.log(snapshot.val(), snapshot.key);
-	});
-
-
-
-	/*
-
-		Monitorar mudanças de um nó filho
-
-	*/
-
-	pessoaRef.on('child_changed', (snapshot, key) => {
-
-		console.log('Chield changed');
-		console.log(snapshot.val(), key);
+		});
 
 	});
 
-
-	/*
-		
-		Monitorar exclusões
-
-	*/
-
-	pessoaRef.on('child_removed', snapshot => {
-
-		console.log('removed', snapshot.key);
-
-	});
 }
 
 
