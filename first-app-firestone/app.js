@@ -68,19 +68,6 @@ function updatePessoa(id, pessoa){
 	});
 }
 
-function updatePessoaAtributo(id, prop, value){
-	
-	// pessoaRef.child(id + '/' + prop).set(value).then( () => {} );
-
-	var obj = {};
-	obj[prop] = value;
-	// { prop: value}
-
-	pessoaRef.child(id).update( obj ).then( () => {} );
-
-}
-
-
 function escutarPessoas(){
 
 
@@ -110,101 +97,117 @@ function escutarPessoas(){
 
 //So é possível utilizar apenas um método de ordenação por vez
 function getOrdenados() {
+	
+	pessoaCollection.orderBy('idade', 'desc').get().then(snapshot => {
 
-	pessoaRef.orderByChild('idade').on('child_added', snapshot => {
-		console.log(snapshot.val(), snapshot.key);
+		snapshot.docs.forEach( doc => {
+			console.log(doc.data());
+		})
+
 	});
 
-	pessoaRef.orderByKey().on('child_added', snapshot => {
-		console.log(snapshot.val(), snapshot.key);
-	});
-
-
-	//Orderna pelo valor de cada propriedade dentro do NO, não vale para nos que tenham como filho outros nós
-	pessoaRef.child('-LmHPXCSWmPc0hS1DZK').orderByValue().on('child_added', snapshot => {
-		console.log(snapshot.val(), snapshot.key);
-	});
+	// se for usar where em conjunto com orderby, não pode usar o where em um campo diferente do que quer ordenar
+	
 }
 
-//Filtros só podem ser executados após um orderByChild
 function filtrar(){
-	pessoaRef.orderByChild('idade').startAt(25).on('child_added', snapshot => {
-		console.log(snapshot.val(), snapshot.key);
+
+	// não é possível utilizar || e !=
+
+	pessoaCollection.where('idade', '>', 9).get().then(snapshot => {
+
+		snapshot.docs.forEach( doc => {
+			console.log(doc.data());
+		})
+
 	});
 
-	pessoaRef.orderByChild('idade').endAt(25).on('child_added', snapshot => {
-		console.log(snapshot.val(), snapshot.key);
-	});
+	pessoaCollection.where('idade', '>', 9).where('idade', '<', 50).get().then(snapshot => {
 
-	pessoaRef.orderByChild('idade').equalTo(1000).on('child_added', snapshot => {
-		console.log(snapshot.val(), snapshot.key);
-	});
+		snapshot.docs.forEach( doc => {
+			console.log(doc.data());
+		})
 
+	});
 }
 
 function adicionarLimite(){
 	
-	//2 primeiros
-	pessoaRef.orderByChild('idade').limitToFirst(2).on('child_added', snapshot => {
-		console.log(snapshot.val(), snapshot.key);
+	//3 primeiros
+	pessoaCollection.limit(3).get().then(snapshot => {
+
+		snapshot.docs.forEach( doc => {
+			console.log(doc.data());
+		})
+
 	});
 
-	//3 ultimos
-	pessoaRef.orderByChild('idade').limitToLast(3).on('child_added', snapshot => {
-		console.log(snapshot.val(), snapshot.key);
+
+	// Cursores para filtrar (paginação)
+	// .startAt, começa neste valor, igual >=
+	// .startAfter, igual >
+	// .endBefore, igual <
+	// .endAt, igual <=
+	// Só consigo utilizar cursores com ordenação
+
+	//ex: pessoas com idade acima de 25 anos até 40
+	pessoaCollection.orderBy('idade').startAfter(25).endAt(40).get().then(snapshot => {
+
+		snapshot.docs.forEach( doc => {
+			console.log(doc.data());
+		})
+
 	});
 
-	//Não precisa de filtros
-	pessoaRef.limitToLast(3).on('child_added', snapshot => {
-		console.log(snapshot.val(), snapshot.key);
-	});
+	// Consigo também utilizar objetos nestas funções
+	// Ou seja, vou pegar do terceiro registro pra frente neste exemplo
+	pessoaCollection.limit(3).get().then(snapshot => {
 
-	//Exemplo de paginação
-	pessoaRef.orderByChild('idade').startAt(0).limitToLast(20).on('child_added', snapshot => {
-		console.log(snapshot.val(), snapshot.key);
-	});
+		pessoaCollection.orderBy('idade').startAt(snapshot.docs[2]).get().then(snapshot => {
+
+			snapshot.docs.forEach( doc => {
+				console.log(doc.data());
+			})
+
+		});
+	});	
 }
 
 
-function removerObservaveis() {
-	pessoaRef.on('value', snapshot => {
+//Utilizado para gravar registros em massa
+// se um falhar, não irá inerir nada.
+function gravarEmLotes (){
 
 
-		pessoaRef.off('value');
-	})
+	//Podemos gravar em lotes, 500 por vez
+
+	var batch = firebase.firestore().batch();
+
+	var nomes = ['Pedro', 'Gabriel', 'Rabelo' , 'Barboza', 'Kellyane', 'Alves', 'Fernandes', 'Eduarda'];
+
+	for(var i = 0; i < 100 ; i++){
+
+
+		var pessoa = {
+			nome: nomes[Math.floor(Math.random() * (nomes.length - 1))],
+			idade: Math.floor(Math.random() * 22 + 18)
+		};
+
+		var ref = pessoaCollection.doc(String(i));
+
+		batch.set(ref, pessoa);
+	};
+
+	batch.commit().then( () => {
+		console.log('Concluido');
+	});
+
+
 }
+
 
 function log(){
 	firebase.database.enableLogging( message => console.log('[FIREBASE]', message));
 }
 
 log();
-
-
-function capturandoErros() {
-	pessoaRef.orderByChild('idade').startAt(0).limitToLast(20).on('child_added', snapshot => {
-		console.log(snapshot.val(), snapshot.key);
-	}, err => console.log(err) );
-}
-
-function realizandoChamadasHttp() {
-
-	//GET
-	fetch('https://fir-app-c1519.firebaseio.com/pessoa/-LmHPXCSWmPc0hS1DZKz.json')
-	.then(res => res.json())
-	.then(res => {
-		console.log(res);
-	});
-
-	//POST
-	fetch('https://fir-app-c1519.firebaseio.com/pessoa.json', {
-		body: JSON.stringify({nome: 'PGZAO', idade: 13}),
-		method: 'POST',
-		mode: 'no-cors'
-	})
-	.then(res => res.json())
-	.then(res => {
-		console.log(res);
-	})
-	.catch(err => console.log(err));
-}
